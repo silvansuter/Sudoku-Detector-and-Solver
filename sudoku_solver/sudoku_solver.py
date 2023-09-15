@@ -10,7 +10,7 @@ def printSudoku(sudoku):
     print(((r(*"╔═╤╦╗") + q(q("║ %d │ %d │ %d "*3 + "║\n",r(*"╟─┼╫╢")), r(*"╠═╪╬╣")) +
             r(*"╚═╧╩╝")) % tuple(sudoku)).replace(*"0 "))
 
-def sudokuSolver(inputSudoku, othersolution_support=[]):
+def computeAllSolutions(inputSudoku, othersolution_support=[]):
     # Create a CP model.
     model = cp_model.CpModel()
 
@@ -38,14 +38,14 @@ def sudokuSolver(inputSudoku, othersolution_support=[]):
             for k in range(9):
                 model.Add(sum(variables[l + i][r + j][k] for i in range(3) for j in range(3)) == 1)
 
-    # Fixed numbers
+    # Fixed numbers from the input sudoku
     for i in range(9):
         for j in range(9):
             k = inputSudoku[9*i+j] - 1
             if k >= 0:
                 model.Add(variables[i][j][k] == 1)
 
-    # Use the support for other solutions (if provided)
+    # Use the support of other solutions to form additional constraints. We do not want our solution to be equal to an already computed one.
     for other_solution in othersolution_support:
         dot_product = []
         for i in range(9):
@@ -54,19 +54,20 @@ def sudokuSolver(inputSudoku, othersolution_support=[]):
                     dot_product.append(variables[i][j][k] * other_solution[81*i+9*j+k])
         model.Add(sum(dot_product) < 81)
 
+    # We solve for any feasible solution of the integer program
     model.Minimize(0)
 
     # Solve the CP
     solver = cp_model.CpSolver()
     status = solver.Solve(model)
 
-    # If no solution exists...
+    # If no solution exists, return None
     if status != cp_model.OPTIMAL:
         return None, None
 
-    # Otherwise...
-    outputSudoku = [0] * len(inputSudoku)
-    support = [0] * (9**3)
+    # Otherwise return the solution of the sudoku, as well as the support
+    outputSudoku = [0] * len(inputSudoku) # This array will contain the (flattened) solution of the sudoku
+    support = [0] * (9**3) # This array will contain the one-hot vectors for each of the 9^2 entries of the sudoku, again flattened
 
     for i in range(9):
         for j in range(9):
@@ -90,16 +91,25 @@ def numberOfSolutions(inputSudoku, maxNumber = 10):
     #           maxNumber: the maximum number of solutions that get computed
     # OUTPUT:   len(sols): the number of solutions
     #           sols: a list of solutions, each in list form
+    
+    # Create empty arrays for saving the solutions
     sols = []
     supps = []
-    inputSudoku = list(np.array(inputSudoku).flatten().astype(int))
-    sol, supp = sudokuSolver(inputSudoku)
     
+    # Bring the Sudoku into the desired form
+    inputSudoku = list(np.array(inputSudoku).flatten().astype(int))
+    
+    # Compute a first solution
+    sol, supp = computeAllSolutions(inputSudoku)
+    
+    # Compute a next solution, as long as there is was a new solution for a sudoku
     while sol != None:
         sols.append(sol)
         supps.append(supp)
+        # If we computed the maximum number of solutions, we leave the loop early
         if len(sols) == maxNumber:
             break
-        sol, supp = sudokuSolver(inputSudoku, supps)
-        
-    return (len(sols), sols)
+        sol, supp = computeAllSolutions(inputSudoku, supps)
+    
+    # Return the number of solutions, as well as the solutions
+    return len(sols), sols
