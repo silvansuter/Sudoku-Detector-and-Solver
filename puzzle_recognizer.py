@@ -12,23 +12,20 @@ import os
 #with this first function, the sudoku is located - function is from https://pyimagesearch.com/2020/08/10/opencv-sudoku-solver-and-ocr/
 
 def find_puzzle(image, debug=False):
-    # convert the image to grayscale and blur it slightly
+    # Convert the image to greyscale
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    blurred = cv2.GaussianBlur(gray, (7, 7), 3)
     
     # apply adaptive thresholding and then invert the threshold map
-    thresh = cv2.adaptiveThreshold(blurred, 255,
-        cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 11, 2)
+    thresh = cv2.adaptiveThreshold(gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 5, 1)
     thresh = cv2.bitwise_not(thresh)
     # check to see if we are visualizing each step of the image
     # processing pipeline (in this case, thresholding)
     if debug:
-        cv2.imshow("Puzzle Thresh", thresh)
-        cv2.waitKey(0)
+        plt.figure()
+        plt.imshow(thresh)
     # find contours in the thresholded image and sort them by size in
     # descending order
-    cnts = cv2.findContours(thresh.copy(), cv2.RETR_EXTERNAL,
-        cv2.CHAIN_APPROX_SIMPLE)
+    cnts = cv2.findContours(thresh.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     cnts = imutils.grab_contours(cnts)
     cnts = sorted(cnts, key=cv2.contourArea, reverse=True)
     # initialize a contour that corresponds to the puzzle outline
@@ -54,9 +51,9 @@ def find_puzzle(image, debug=False):
         # draw the contour of the puzzle on the image and then display
         # it to our screen for visualization/debugging purposes
         output = image.copy()
+        plt.figure()
         cv2.drawContours(output, [puzzleCnt], -1, (0, 255, 0), 2)
-        cv2.imshow("Puzzle Outline", output)
-        cv2.waitKey(0)
+        plt.imshow(output)
     # apply a four point perspective transform to both the original
     # image and grayscale image to obtain a top-down bird's eye view
     # of the puzzle
@@ -65,8 +62,8 @@ def find_puzzle(image, debug=False):
     # check to see if we are visualizing the perspective transform
     if debug:
         # show the output warped image (again, for debugging purposes)
-        cv2.imshow("Puzzle Transform", puzzle)
-        cv2.waitKey(0)
+        plt.figure()
+        plt.imshow(puzzle)
     # return a 2-tuple of puzzle in both RGB and grayscale
     return (puzzle, warped)
 
@@ -107,58 +104,52 @@ def keep_boundary_segments(image):
 #might work, see https://pyimagesearch.com/2020/08/10/opencv-sudoku-solver-and-ocr/
 
 def compute_digit(image, digit_model):
-        # Resize the image to a fixed size (e.g., 28x28)
-        image = cv2.resize(image, (28, 28))
-        
-        # Apply automatic thresholding to the cell
-        _, thresh = cv2.threshold(image, 0, 255, cv2.THRESH_BINARY_INV | cv2.THRESH_OTSU)
-        
-        thresh = cv2.adaptiveThreshold(image, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, 
-                                        cv2.THRESH_BINARY_INV, 11, 2)
+    # Resize the image to a fixed size (e.g., 28x28)
+    image = cv2.resize(image, (28, 28))
+    
+    # Applying Gaussian Blur
+    blurred_image = cv2.GaussianBlur(image, (3, 3), 0)
+    
+    # Apply adaptive thresholding
+    thresh = cv2.adaptiveThreshold(blurred_image, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, 
+                                    cv2.THRESH_BINARY_INV, 11, 2)
+    
+    # Check if the thresholding operation produced a valid thresholded image
+    if thresh is None:
+        return 0
 
-        blurred_image = cv2.GaussianBlur(image, (3, 3), 0)
-        _, thresh = cv2.threshold(blurred_image, 10, 255, cv2.THRESH_BINARY_INV | cv2.THRESH_OTSU)
+    # Find contours in the thresholded cell
+    cnts, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
-        
-        # Check if the thresholding operation produced a valid thresholded image
-        if thresh is None:
-            return 0
-        
-        # Apply boundary segment keeping
-        thresh = keep_boundary_segments(thresh)
-        
-        # Find contours in the thresholded cell
-        cnts, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-        
-        # If no contours were found, return None
-        if len(cnts) == 0:
-            return 0
-        
-        # otherwise, find the largest contour in the cell and create a
-        # mask for the contour
-        c = max(cnts, key=cv2.contourArea)
-        mask = np.zeros(thresh.shape, dtype="uint8")
-        cv2.drawContours(mask, [c], -1, 255, -1)
-        
-        # compute the percentage of masked pixels relative to the total
-        # area of the image
-        (h, w) = thresh.shape
-        percentFilled = cv2.countNonZero(mask) / float(w * h)
-        # if less than 3% of the mask is filled then we are looking at
-        # noise and can safely ignore the contour
-        if percentFilled < 0.03:
-            return 0
-        # apply the mask to the thresholded cell
-        digit = cv2.bitwise_and(thresh, thresh, mask=mask)
+    # If no contours were found, return None
+    if len(cnts) == 0:
+        return 0
+    
+    # Find the largest contour in the cell and create a mask for it
+    c = max(cnts, key=cv2.contourArea)
+    mask = np.zeros(thresh.shape, dtype="uint8")
+    cv2.drawContours(mask, [c], -1, 255, -1)
+    
+    # Compute the percentage of masked pixels relative to the total area of the image
+    (h, w) = thresh.shape
+    percentFilled = cv2.countNonZero(mask) / float(w * h)
 
-        #plt.imshow(digit[:, :])
-        #plt.axis('off')
-        #plt.show()
-        digit = np.asarray(digit)
-        digit = digit / 255.0
-        digit = np.expand_dims(digit, axis=0)
-        digit = np.expand_dims(digit, axis=-1)
-        return np.argmax(digit_model.predict(digit, verbose=False))
+    # If less than 3% of the mask is filled then it's likely noise, so ignore it
+    if percentFilled < 0.03:
+        return 0
+
+    # Apply the mask to the thresholded cell
+    digit = cv2.bitwise_and(thresh, thresh, mask=mask)
+    digit = keep_boundary_segments(digit)
+    plt.figure()
+    plt.imshow(digit)
+    plt.show()
+    
+    digit = np.asarray(digit)
+    digit = digit / 255.0
+    digit = np.expand_dims(digit, axis=0)
+    digit = np.expand_dims(digit, axis=-1)
+    return np.argmax(digit_model.predict(digit, verbose=False))
 
 def compile_model():
     # Define the model architecture
@@ -177,7 +168,7 @@ def compile_model():
     model.compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
     
     # Set already trained weights
-    model.load_weights('model_training/digit_recognizer.h5')
+    model.load_weights('model_training/digit_recognizer_test.h5')
     
     # Return compiled model with trained weights
     return model
@@ -191,4 +182,9 @@ def recognize_sudoku(image):
         for j in range(9):
             puzzle_ij = warped[int(l/9*i):int(l/9*(i+1)), int(h/9*j):int(h/9*(j+1))]
             A[i,j] = compute_digit(puzzle_ij, digit_model)
+            if A[i,j] != 0:
+                plt.figure()
+                plt.imshow(puzzle_ij)
+                plt.show()
+                print(A[i,j])
     return A
