@@ -9,95 +9,92 @@ import matplotlib.pyplot as plt
 from tensorflow import keras
 import os
 
-#with this first function, the sudoku outline is located - function is from https://pyimagesearch.com/2020/08/10/opencv-sudoku-solver-and-ocr/
-
 def find_puzzle(image, debug=False):
-    """Sudoku is located in the image. A warped gray-scale version is returned.
+    """Locate the Sudoku puzzle in the provided image and return a warped grayscale version of it. The approach is taken from https://pyimagesearch.com/2020/08/10/opencv-sudoku-solver-and-ocr/.
 
     Args:
-        image (_type_): _description_
-        debug (bool, optional): _description_. Defaults to False.
+        image (numpy.ndarray): The input image containing the Sudoku puzzle.
+        debug (bool, optional): If True, visualizes each step of the image processing pipeline. Defaults to False.
 
     Raises:
-        Exception: If sudoku could not be found.
+        Exception: If the Sudoku puzzle outline could not be found.
 
-    Returns: # TODO
-        _type_: _description_
+    Returns:
+        tuple: A 2-tuple containing the RGB and grayscale warped images of the located puzzle.
     """
-    # convert the image to grayscale and blur it slightly
-    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    blurred = cv2.GaussianBlur(gray, (7, 7), 3)
     
-    # apply adaptive thresholding and then invert the threshold map
-    thresh = cv2.adaptiveThreshold(blurred, 255,
-        cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 11, 2)
-    thresh = cv2.bitwise_not(thresh)
-    # check to see if we are visualizing each step of the image
-    # processing pipeline (in this case, thresholding)
+    # Convert the image to grayscale and apply a slight Gaussian blur
+    gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    blurred_image = cv2.GaussianBlur(gray_image, (7, 7), 3) # To reduce noise.
+    
+    # Apply adaptive thresholding to highlight main features and then invert the threshold map for contour detection
+    thresholded_image = cv2.adaptiveThreshold(blurred_image, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 11, 2)
+    inverted_threshold = cv2.bitwise_not(thresholded_image)
+    
     if debug:
-        cv2.imshow("Puzzle Thresh", thresh)
+        cv2.imshow("Thresholded Puzzle Image", inverted_threshold)
         cv2.waitKey(0)
-    # find contours in the thresholded image and sort them by size in
-    # descending order
-    cnts = cv2.findContours(thresh.copy(), cv2.RETR_EXTERNAL,
-        cv2.CHAIN_APPROX_SIMPLE)
-    cnts = imutils.grab_contours(cnts)
-    cnts = sorted(cnts, key=cv2.contourArea, reverse=True)
-    # initialize a contour that corresponds to the puzzle outline
-    puzzleCnt = None
-    # loop over the contours
-    for c in cnts:
-        # approximate the contour
-        peri = cv2.arcLength(c, True)
-        approx = cv2.approxPolyDP(c, 0.02 * peri, True)
-        # if our approximated contour has four points, then we can
-        # assume we have found the outline of the puzzle
-        if len(approx) == 4:
-            puzzleCnt = approx
-            break
-    # if the puzzle contour is empty then our script could not find
-    # the outline of the Sudoku puzzle so raise an error
-    if puzzleCnt is None:
-        raise Exception(("Could not find Sudoku puzzle outline. "
-            "Try debugging your thresholding and contour steps."))
-    # check to see if we are visualizing the outline of the detected
-    # Sudoku puzzle
-    if debug:
-        # draw the contour of the puzzle on the image and then display
-        # it to our screen for visualization/debugging purposes
-        output = image.copy()
-        cv2.drawContours(output, [puzzleCnt], -1, (0, 255, 0), 2)
-        cv2.imshow("Puzzle Outline", output)
-        cv2.waitKey(0)
-    # apply a four point perspective transform to both the original
-    # image and grayscale image to obtain a top-down bird's eye view
-    # of the puzzle
-    puzzle = four_point_transform(image, puzzleCnt.reshape(4, 2))
-    warped = four_point_transform(gray, puzzleCnt.reshape(4, 2))
-    # check to see if we are visualizing the perspective transform
-    if debug:
-        # show the output warped image (again, for debugging purposes)
-        cv2.imshow("Puzzle Transform", puzzle)
-        cv2.waitKey(0)
-    # return a 2-tuple of puzzle in both RGB and grayscale
-    return (puzzle, warped)
 
-def keep_boundary_segments(image):
-    # Label connected regions in the image
+    # Find contours in the thresholded image, and sort them by area in descending order
+    contours = cv2.findContours(inverted_threshold.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    contours = imutils.grab_contours(contours)
+    sorted_contours = sorted(contours, key=cv2.contourArea, reverse=True)
+
+    # Loop through the sorted contours and identify the largest one that approximates to a rectangle
+    puzzle_contour = None
+    for contour in sorted_contours:
+        contour_perimeter = cv2.arcLength(contour, True)
+        approximated_contour = cv2.approxPolyDP(contour, 0.02 * contour_perimeter, True)
+
+        # If the approximated contour has four points, it could be the puzzle's outline
+        if len(approximated_contour) == 4:
+            puzzle_contour = approximated_contour
+            break
+
+    if puzzle_contour is None:
+        raise Exception("Could not find the Sudoku puzzle outline. Debug the thresholding and contour detection steps.")
+
+    if debug:
+        cv2.drawContours(image, [puzzle_contour], -1, (0, 255, 0), 2)
+        cv2.imshow("Detected Puzzle Outline", image)
+        cv2.waitKey(0)
+
+    # Warp the detected puzzle area to get a top-down view
+    warped_rgb = four_point_transform(image, puzzle_contour.reshape(4, 2))
+    warped_gray = four_point_transform(gray_image, puzzle_contour.reshape(4, 2))
+
+    if debug:
+        cv2.imshow("Warped Puzzle", warped_rgb)
+        cv2.waitKey(0)
+
+    return (warped_rgb, warped_gray)
+
+def remove_boundary_segments(image):
+    """
+    Remove segments from the image that only touch the boundary without extending to the middle.
+
+    This function is designed to filter out unwanted segments, often residues from 
+    grid lines in sudoku images, while retaining valid segments, like numbers 
+    that might touch the boundary but are still centered in the cell.
+
+    Args:
+        image (numpy.ndarray): Binary image where segments are represented by 
+                               non-zero values and the background is zero.
+
+    Returns:
+        numpy.ndarray: Processed binary image with unwanted boundary-only segments removed.
+    """
+    
     labeled_image = measure.label(image)
-    
-    # Find the unique labels of the connected regions
-    unique_labels = np.unique(labeled_image)
-    
-    # Get the image shape
     height, width = image.shape
-    
-    # Iterate over each label
-    for label in unique_labels:
-        # Extract the region corresponding to the label
+
+    # Define a margin to check if a segment extends into the middle
+    margin = int(0.2 * height)  # For example, 20% of the height and width. Adjust as necessary.
+    middle_area = (slice(margin, -margin), slice(margin, -margin))
+
+    for label in np.unique(labeled_image):
         region = (labeled_image == label)
         
-        # Check if the region touches the boundary
         touches_boundary = (
             np.any(region[0, :]) or  # Top boundary
             np.any(region[-1, :]) or  # Bottom boundary
@@ -105,74 +102,78 @@ def keep_boundary_segments(image):
             np.any(region[:, -1])  # Right boundary
         )
         
-        # Check if the region also extends into the middle of the image
-        extends_into_middle = (
-            np.any(region[6:-6, 6:-6])  # Excluding the boundary pixels
-        )
+        extends_into_middle = np.any(region[middle_area])
         
-        # Remove the region if it only touches the boundary
-        if not extends_into_middle:
+        # If the segment touches the boundary and doesn't extend into the middle, remove it
+        if touches_boundary and not extends_into_middle:
             image[labeled_image == label] = 0
     
     return image
 
+
 #might work, see https://pyimagesearch.com/2020/08/10/opencv-sudoku-solver-and-ocr/
 
 def compute_digit(image, digit_model):
-        # Resize the image to a fixed size (e.g., 28x28)
-        image = cv2.resize(image, (28, 28))
-        
-        # Apply automatic thresholding to the cell
-        _, thresh = cv2.threshold(image, 0, 255, cv2.THRESH_BINARY_INV | cv2.THRESH_OTSU)
-        
-        thresh = cv2.adaptiveThreshold(image, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, 
-                                        cv2.THRESH_BINARY_INV, 11, 2)
+    """
+    Compute the digit present in an image using a deep learning model.
 
-        blurred_image = cv2.GaussianBlur(image, (3, 3), 0)
-        _, thresh = cv2.threshold(blurred_image, 10, 255, cv2.THRESH_BINARY_INV | cv2.THRESH_OTSU)
+    Args:
+        image: Input image containing a single digit.
+        digit_model: Trained model for digit recognition.
 
-        
-        # Check if the thresholding operation produced a valid thresholded image
-        if thresh is None:
-            return 0
-        
-        # Apply boundary segment keeping
-        thresh = keep_boundary_segments(thresh)
-        
-        # Find contours in the thresholded cell
-        cnts, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-        
-        # If no contours were found, return None
-        if len(cnts) == 0:
-            return 0
-        
-        # otherwise, find the largest contour in the cell and create a
-        # mask for the contour
-        c = max(cnts, key=cv2.contourArea)
-        mask = np.zeros(thresh.shape, dtype="uint8")
-        cv2.drawContours(mask, [c], -1, 255, -1)
-        
-        # compute the percentage of masked pixels relative to the total
-        # area of the image
-        (h, w) = thresh.shape
-        percentFilled = cv2.countNonZero(mask) / float(w * h)
-        # if less than 3% of the mask is filled then we are looking at
-        # noise and can safely ignore the contour
-        if percentFilled < 0.03:
-            return 0
-        # apply the mask to the thresholded cell
-        digit = cv2.bitwise_and(thresh, thresh, mask=mask)
+    Returns:
+        int: Recognized digit. Returns 0 if no digit is recognized.
+    """
+    # Resize the image
+    image = cv2.resize(image, (28, 28))
+    
+    # Preprocess: blur and then apply adaptive thresholding
+    blurred_image = cv2.GaussianBlur(image, (3, 3), 0)
+    thresh = cv2.adaptiveThreshold(blurred_image, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, 
+                                    cv2.THRESH_BINARY_INV, 11, 2)
 
-        #plt.imshow(digit[:, :])
-        #plt.axis('off')
-        #plt.show()
-        digit = np.asarray(digit)
-        digit = digit / 255.0
-        digit = np.expand_dims(digit, axis=0)
-        digit = np.expand_dims(digit, axis=-1)
-        return np.argmax(digit_model.predict(digit, verbose=False))
+    # Morphological operations to reduce noise
+    kernel = np.ones((2,2),np.uint8)
+    thresh = cv2.morphologyEx(thresh, cv2.MORPH_OPEN, kernel)
+    
+    # Retain only the segments that touch the boundary
+    thresh = remove_boundary_segments(thresh)
+    
+    # Find the largest contour in the cell
+    cnts, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    if not cnts:
+        return 0
+    
+    c = max(cnts, key=cv2.contourArea)
+    x, y, w, h = cv2.boundingRect(c)
+    
+    # Validate contour based on aspect ratio and bounding box position
+    aspect_ratio = w / h
+    if aspect_ratio < 0.2 or aspect_ratio > 5:
+        return 0
+    if w * h < 0.03 * 28 * 28: # Size constraints
+        return 0
+    if x > 12 or y > 12 or (x + w) < 16 or (y + h) <16: # Position constraints
+        return 0
+    
+    # Mask the digit
+    mask = np.zeros(thresh.shape, dtype="uint8")
+    cv2.drawContours(mask, [c], -1, 255, -1)
+    digit = cv2.bitwise_and(thresh, thresh, mask=mask)
+    
+    # Prepare the image for the model and make the prediction
+    digit = np.asarray(digit, dtype=np.float32) / 255.0
+    digit = np.expand_dims(digit, axis=[0, -1])
+    return np.argmax(digit_model.predict(digit, verbose=False))
+
 
 def compile_model():
+    """
+    Compile and return a trained digit recognition model.
+
+    Returns:
+        keras.models.Model: Compiled and trained digit recognition model.
+    """
     # Define the model architecture
     model = keras.Sequential([
         keras.layers.Conv2D(32, kernel_size=(3, 3), activation='relu', input_shape=(28, 28, 1)),
@@ -185,23 +186,48 @@ def compile_model():
         keras.layers.Dense(10, activation='softmax')
     ])
 
-    # Compile the model
+    # Compile and load pretrained weights
     model.compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
-    
-    # Set already trained weights
     model.load_weights('model_training/digit_recognizer.h5')
     
     # Return compiled model with trained weights
     return model
 
 def recognize_sudoku(image):
+    """
+    Recognizes and extracts the digits of a Sudoku puzzle from an image.
+
+    Args:
+        image (numpy.ndarray): The input image containing the Sudoku puzzle as a color image.
+
+    Returns:
+        numpy.ndarray: A 9x9 matrix (2D numpy array) representing the recognized digits of the Sudoku puzzle.
+                       A value of 0 indicates an empty cell.
+    """
+
+    # Load the pre-trained digit recognition model
     digit_model = compile_model()
+
+    # Find the Sudoku puzzle and warp it to get a top-down view
     (puzzle, warped) = find_puzzle(image)
+
+    # Get the dimensions of the warped grayscale image
     l, h = warped.shape
+
+    # Initialize a 9x9 matrix filled with zeros to store the recognized digits
     A = np.zeros((9,9))
+
+    # Iterate through each of the 9 rows
     for i in range(9):
+        # Iterate through each of the 9 columns
         for j in range(9):
-            # By the way the sudoku was warped, the 9x9 fields of the sudoku are equally distributed.
+            # Extract the individual cell from the Sudoku grid based on the current row and column
+            # The warping process ensures the cells are equally distributed, so we can easily slice them
             puzzle_ij = warped[int(l/9*i):int(l/9*(i+1)), int(h/9*j):int(h/9*(j+1))]
+            
+            # Recognize the digit in the extracted cell using the digit recognition model
+            # and store the result in the matrix
             A[i,j] = compute_digit(puzzle_ij, digit_model)
+
+    # Return the recognized Sudoku puzzle as a 9x9 matrix
     return A

@@ -1,72 +1,66 @@
 import numpy as np
 from ortools.sat.python import cp_model
 
-def printSudoku(sudoku):
-    # compact Sudoku printing function
-    # taken from https://codegolf.stackexchange.com/questions/126930/
-    #    draw-a-sudoku-board-using-line-drawing-characters
-    q = lambda x,y:x+y+x+y+x
-    r = lambda a,b,c,d,e:a+q(q(b*3,c),d)+e+"\n"
-    print(((r(*"╔═╤╦╗") + q(q("║ %d │ %d │ %d "*3 + "║\n",r(*"╟─┼╫╢")), r(*"╠═╪╬╣")) +
-            r(*"╚═╧╩╝")) % tuple(sudoku)).replace(*"0 "))
-
 def sudokuSolver(inputSudoku, othersolution_support=[]):
+    """
+    Solves a given Sudoku using Constraint Programming.
+    
+    Args:
+        inputSudoku (list): A list representation of the Sudoku to solve.
+        othersolution_support (list, optional): A list of previously computed solutions to avoid.
+        
+    Returns:
+        outputSudoku (list): A list representation of the solved Sudoku.
+        support (list): A list representation of the support values for the solution.
+    """
     # Create a CP model.
     model = cp_model.CpModel()
 
-    # Variables
-    variables = [[[model.NewBoolVar(f'x{i}{j}{k}')
-                   for k in range(9)]
-                  for j in range(9)]
-                 for i in range(9)]
+    # Define the variables for each cell and number
+    variables = [[[model.NewBoolVar(f'x{i}{j}{k}') for k in range(9)] for j in range(9)] for i in range(9)]
 
-    # Constraints
-    # Each cell should have one number.
+    # Constraint: Each cell should have one number
     for i in range(9):
         for j in range(9):
             model.Add(sum(variables[i][j]) == 1)
 
-    # Rows and columns constraints
+    # Constraints for rows and columns
     for k in range(9):
         for i in range(9):
             model.Add(sum(variables[i][j][k] for j in range(9)) == 1)
             model.Add(sum(variables[j][i][k] for j in range(9)) == 1)
 
-    # Box constraints
+    # Constraints for 3x3 boxes
     for l in [0, 3, 6]:
         for r in [0, 3, 6]:
             for k in range(9):
                 model.Add(sum(variables[l + i][r + j][k] for i in range(3) for j in range(3)) == 1)
 
-    # Fixed numbers
+    # Place the known numbers from the input Sudoku
     for i in range(9):
         for j in range(9):
             k = inputSudoku[9*i+j] - 1
             if k >= 0:
                 model.Add(variables[i][j][k] == 1)
 
-    # Use the support for other solutions (if provided)
+    # Avoid previously computed solutions
     for other_solution in othersolution_support:
-        dot_product = []
-        for i in range(9):
-            for j in range(9):
-                for k in range(9):
-                    dot_product.append(variables[i][j][k] * other_solution[81*i+9*j+k])
+        dot_product = [variables[i][j][k] * other_solution[81*i+9*j+k] for i in range(9) for j in range(9) for k in range(9)]
         model.Add(sum(dot_product) < 81)
 
     model.Minimize(0)
 
-    # Solve the CP
+    # Solve the CP model
     solver = cp_model.CpSolver()
     status = solver.Solve(model)
 
-    # If no solution exists...
+    # If no solution found, return None
     if status != cp_model.OPTIMAL:
         return None, None
 
-    # Otherwise...
-    outputSudoku = [0] * len(inputSudoku)
-    support = [0] * (9**3)
+    # Extract solution and support
+    outputSudoku = [0] * len(inputSudoku) # This array will contain the (flattened) solution of the sudoku
+    support = [0] * (9**3) # This array will contain the one-hot vectors for each of the 9^2 entries of the sudoku, again flattened
 
     for i in range(9):
         for j in range(9):
@@ -77,29 +71,68 @@ def sudokuSolver(inputSudoku, othersolution_support=[]):
 
     return outputSudoku, support
 
-# This function creates a string representation of a given python-mip model
 def model_to_str(model):
+    """
+    Create a string representation of a given python-mip model.
+    
+    Args:
+        model (Model): python-mip model.
+        
+    Returns:
+        str: String representation of the model.
+    """
     s = f'{model.name}:\n{model.sense}\n{model.objective}\n'
-    if model.constrs:
-        s += 'SUBJECT TO\n' + '\n'.join(map(str, model.constrs)) + '\n'
+    s += 'SUBJECT TO\n' + '\n'.join(map(str, model.constrs)) + '\n' if model.constrs else ''
     s += 'VARIABLES\n' + '\n'.join(f'{v.lb} <= {v.name} <= {v.ub} {v.var_type}' for v in model.vars)
     return s
 
-def numberOfSolutions(inputSudoku, maxNumber = 10):
-    # INPUT:    inputSudoku: a sudoku which is either in list form (first row, then second row, ...) or as 2D array
-    #           maxNumber: the maximum number of solutions that get computed
-    # OUTPUT:   len(sols): the number of solutions
-    #           sols: a list of solutions, each in list form
+def numberOfSolutions(inputSudoku, maxNumber=10):
+    """
+    Computes the number of solutions for a given Sudoku puzzle up to a specified limit.
+
+    Args:
+        inputSudoku (list or 2D array): Input Sudoku in list form or as a 2D array.
+        maxNumber (int, optional): The maximum number of solutions to compute. Defaults to 10.
+
+    Returns:
+        tuple: 
+            int: The number of solutions found.
+            list: A list of solutions, each in list form.
+    """
+    # Initialize lists to store solutions and their supports
     sols = []
     supps = []
+
+    # Flatten the 2D input array to a 1D list and convert elements to integers
     inputSudoku = list(np.array(inputSudoku).flatten().astype(int))
+
+    # Try to solve the Sudoku using the solver function
     sol, supp = sudokuSolver(inputSudoku)
-    
-    while sol != None:
+
+    # As long as solutions are found, add them to the list and avoid those in subsequent solves
+    while sol is not None:
         sols.append(sol)
         supps.append(supp)
+
+        # Stop if maximum number of solutions has been reached
         if len(sols) == maxNumber:
             break
+
+        # Try finding another solution while avoiding previously found ones
         sol, supp = sudokuSolver(inputSudoku, supps)
-        
-    return (len(sols), sols)
+
+    # Return the number of solutions found and the list of solutions
+    return len(sols), sols
+
+def printSudoku(sudoku):
+    """
+    Prints the Sudoku in a formatted visual representation.
+    Taken from https://codegolf.stackexchange.com/questions/126930/draw-a-sudoku-board-using-line-drawing-characters.
+    
+    Args:
+        sudoku (list): A list representation of the Sudoku (first row, then second row, ...).
+    """
+    q = lambda x,y:x+y+x+y+x
+    r = lambda a,b,c,d,e:a+q(q(b*3,c),d)+e+"\n"
+    print(((r(*"╔═╤╦╗") + q(q("║ %d │ %d │ %d "*3 + "║\n",r(*"╟─┼╫╢")), r(*"╠═╪╬╣")) +
+            r(*"╚═╧╩╝")) % tuple(sudoku)).replace(*"0 "))
