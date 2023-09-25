@@ -13,31 +13,40 @@ app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
 @app.route('/upload', methods=['POST'])
 def upload_file():
+    # Check if the post request has the file part
     if 'file' not in request.files:
         return jsonify(error='No file part')
     file = request.files['file']
+    
+    # If no file is selected
     if file.filename == '':
         return jsonify(error='No selected file')
+    
+    # Save the uploaded file
     filename = secure_filename(file.filename)
     file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
     
-    # Read the image using cv2
+    # Load the uploaded image
     image_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
     loaded_image = cv2.imread(image_path)
     if loaded_image is None:
         return jsonify(error="Failed to read the image. Please ensure it's a valid image file.")
     
-    # Pass the loaded image to recognize_sudoku
+    # Recognize the Sudoku puzzle from the image
     sudoku_np = recognize_sudoku(loaded_image)
+    sudoku_list = sudoku_np.tolist()  # Convert to list for JSON serialization
     
-    # Convert the numpy array to a Python list for JSON serialization
-    sudoku_list = sudoku_np.tolist()
-    
-    # Return HTML response to display the recognized Sudoku
+    # Serve the recognized Sudoku in an HTML response
+    return render_recognized_sudoku(sudoku_list)
+
+def render_recognized_sudoku(sudoku_list):
+    # This function returns an HTML response rendering the recognized Sudoku puzzle.
     return '''
     <html>
         <head>
+            <!-- Include jQuery library -->
             <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+            <!-- Define styling for the Sudoku table -->
             <style>
                 table {
                     border-collapse: collapse;
@@ -63,20 +72,21 @@ def upload_file():
             </style>
         </head>
         <body>
-            <button onclick="window.location.href='/'">Reset</button>
+            <button onclick="window.location.href='/'">Reset</button> <!-- Reset button to re-upload an image -->
             Recognized Sudoku: <br>
-            <div id="sudokuOutput"></div>
+            <div id="sudokuOutput"></div> <!-- Container for the recognized Sudoku -->
             <br>
-            <button onclick="submitSudoku()">Solve Sudoku</button>
+            <button onclick="submitSudoku()">Solve Sudoku</button> <!-- Button to solve the recognized Sudoku -->
             <br><br>
             Solutions: <br>
-            <div id="solutionsOutput"></div>
+            <div id="solutionsOutput"></div> <!-- Container for the solved Sudoku -->
             
             <script>
                 const initialSudoku = ''' + jsonify(sudoku=sudoku_list).get_data(as_text=True) + ''';
-                createSudokuTable('sudokuOutput', initialSudoku.sudoku);
+                createSudokuTable('sudokuOutput', initialSudoku.sudoku); <!-- Create Sudoku table for recognized Sudoku -->
                 
                 function createSudokuTable(containerIdOrElement, sudoku) {
+                    // Function to create and append a Sudoku table to a container
                     var container;
                     if (typeof containerIdOrElement === "string") {
                         // If containerIdOrElement is a string, get the element by id
@@ -109,7 +119,7 @@ def upload_file():
                 }
                 
                 function submitSudoku() {
-                    // Make AJAX request to solve the Sudoku
+                    // Function to send AJAX request to solve the Sudoku
                     $.ajax({
                         url: "/solve",
                         type: "POST",
@@ -148,6 +158,7 @@ def upload_file():
 
 @app.route('/solve', methods=['POST'])
 def solve_sudoku():
+    # Solve the received Sudoku puzzle
     data = request.get_json(force=True)
     print(data)
     flattened_sudoku = data.get("sudoku")
@@ -165,6 +176,7 @@ def solve_sudoku():
 
 @app.route('/')
 def index():
+    # Serve the main page allowing to upload an image
     return '''
     <html>
         <body>
