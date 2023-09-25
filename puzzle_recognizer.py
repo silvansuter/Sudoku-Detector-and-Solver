@@ -110,9 +110,6 @@ def remove_boundary_segments(image):
     
     return image
 
-
-#might work, see https://pyimagesearch.com/2020/08/10/opencv-sudoku-solver-and-ocr/
-
 def compute_digit(image, digit_model):
     """
     Compute the digit present in an image using a deep learning model.
