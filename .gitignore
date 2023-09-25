@@ -4,5 +4,8 @@
 # Byte-compiled / optimized / DLL files
 __pycache__/
 
+# DS-Store
+.DS_Store
+
 # Unfinished / Unused
 Untitled6.ipynb

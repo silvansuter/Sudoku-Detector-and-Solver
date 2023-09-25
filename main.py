@@ -8,7 +8,7 @@ import os
 import cv2
 
 app = Flask(__name__)
-UPLOAD_FOLDER = 'uploads'
+UPLOAD_FOLDER = 'images/uploads'
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
 @app.route('/upload', methods=['POST'])
@@ -38,56 +38,112 @@ def upload_file():
     <html>
         <head>
             <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+            <style>
+                table {
+                    border-collapse: collapse;
+                }
+                td {
+                    border: 1px solid #000;
+                    width: 2em;
+                    height: 2em;
+                    text-align: center;
+                }
+                .thick-border-right {
+                    border-right-width: thick;
+                }
+                .thick-border-bottom {
+                    border-bottom-width: thick;
+                }
+                .thick-border-top {
+                    border-top-width: thick;
+                }
+                .thick-border-left {
+                    border-left-width: thick;
+                }
+            </style>
         </head>
         <body>
+            <button onclick="window.location.href='/'">Reset</button>
             Recognized Sudoku: <br>
-            <pre id="sudokuOutput"></pre>
-            <script>
-                const sudokuData = ''' + jsonify(sudoku=sudoku_list).get_data(as_text=True) + ''';
-                document.getElementById('sudokuOutput').innerText = JSON.stringify(sudokuData);
-            </script>
-
+            <div id="sudokuOutput"></div>
+            <br>
             <button onclick="submitSudoku()">Solve Sudoku</button>
             <br><br>
             Solutions: <br>
-            <pre id="solutionsOutput"></pre>
+            <div id="solutionsOutput"></div>
+            
             <script>
+                const initialSudoku = ''' + jsonify(sudoku=sudoku_list).get_data(as_text=True) + ''';
+                createSudokuTable('sudokuOutput', initialSudoku.sudoku);
+                
+                function createSudokuTable(containerIdOrElement, sudoku) {
+                    var container;
+                    if (typeof containerIdOrElement === "string") {
+                        // If containerIdOrElement is a string, get the element by id
+                        container = document.getElementById(containerIdOrElement);
+                    } else {
+                        // If containerIdOrElement is a div element, use it directly
+                        container = containerIdOrElement;
+                    }
+                    
+                    const table = document.createElement('table');
+                    container.appendChild(table); // Append table to the resolved container
+                    
+                    sudoku.forEach((row, rowIndex) => {
+                        const tableRow = document.createElement('tr');
+                        row.forEach((cell, cellIndex) => {
+                            const tableCell = document.createElement('td');
+                            tableCell.textContent = cell || '';
+                            
+                            if (cellIndex % 3 === 2) tableCell.classList.add('thick-border-right');
+                            if (rowIndex % 3 === 2) tableCell.classList.add('thick-border-bottom');
+                            if (cellIndex % 3 === 0 && cellIndex !== 0) tableCell.classList.add('thick-border-left');
+                            if (rowIndex % 3 === 0 && rowIndex !== 0) tableCell.classList.add('thick-border-top');
+                            if (cellIndex === 0) tableCell.classList.add('thick-border-left');
+                            if (rowIndex === 0) tableCell.classList.add('thick-border-top');
+                            
+                            tableRow.appendChild(tableCell);
+                        });
+                        table.appendChild(tableRow);
+                    });
+                }
+                
                 function submitSudoku() {
-                    // Convert the displayed Sudoku into a flattened array
-                    const sudokuString = document.getElementById('sudokuOutput').innerText;
-                    const sudoku2D = JSON.parse(sudokuString).sudoku;
-                    const flattenedSudoku = [].concat.apply([], sudoku2D);
                     // Make AJAX request to solve the Sudoku
-                    console.log(flattenedSudoku);
                     $.ajax({
                         url: "/solve",
                         type: "POST",
-                        data: JSON.stringify({ sudoku: flattenedSudoku }),  // Stringify the data
-                        contentType: "application/json",  // Set the content type to JSON
+                        data: JSON.stringify({ sudoku: initialSudoku.sudoku.flat() }),
+                        contentType: "application/json",
                         dataType: "json",
                         success: function(data) {
                             if (data.error) {
                                 alert(data.error);
                                 return;
                             }
-                            // Display the solution(s) on the webpage
-                            let solutionsString = "";
+                            
+                            const solutionsDiv = document.getElementById('solutionsOutput');
+                            solutionsDiv.innerHTML = ''; // Clear previous solutions
+                            
                             data.solutions.forEach((solution, index) => {
-                                solutionsString += "Solution " + (index + 1) + ":\\n";
-                                solution.forEach(row => {
-                                    solutionsString += row.join(' ') + "\\n";
-                                });
-                                solutionsString += "\\n";
+                                const solutionDiv = document.createElement('div'); // Create a new div for each solution
+                                const heading = document.createElement('p');
+                                heading.textContent = "Solution " + (index + 1) + ":";
+                                solutionDiv.appendChild(heading); // Append heading to the new div
+                                
+                                createSudokuTable(solutionDiv, solution); // Pass the new div as the container
+                                solutionsDiv.appendChild(solutionDiv); // Append the new div to solutionsOutput
                             });
-                            document.getElementById('solutionsOutput').innerText = solutionsString;
                         }
                     });
                 }
-
             </script>
         </body>
     </html>
     '''
+
+
+
 
 
 @app.route('/solve', methods=['POST'])
