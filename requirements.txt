@@ -1,0 +1,22 @@
+# Web Framework
+flask==2.3.3  # For creating the web application
+
+# Image Processing Libraries
+opencv-python==4.7.0.72  # For image processing tasks related to recognizing Sudoku puzzles from images
+imutils==0.5.4  # For image processing convenience functions
+scikit-image==0.21.0  # For image segmentation and processing in recognizing Sudoku
+
+# Plotting Library
+matplotlib==3.7.1  # For plotting and visualizing data and images
+
+# Utility and File Handling
+Werkzeug==2.3.7  # For handling uploaded files securely in Flask
+
+# Machine Learning Library
+tensorflow==2.13.0rc1  # For defining and training the machine learning model used for digit recognition
+
+# Optimization Library
+ortools==9.7.2996  # For solving the Sudoku using constraint programming
+
+# Additional Utility
+numpy==1.24.3  # For numerical operations and handling arrays
