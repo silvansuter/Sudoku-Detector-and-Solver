@@ -82,3 +82,8 @@ The contents of the 'printed_digits_dataset'-folder are from https://github.com/
 The approach of localizing the Sudoku and warping is taken from https://pyimagesearch.com/2020/08/10/opencv-sudoku-solver-and-ocr/. The preparation of digits is loosely based also on this post.
 
 The function for plotting a Sudoku with Python is taken from https://codegolf.stackexchange.com/questions/126930/draw-a-sudoku-board-using-line-drawing-characters.
+
+## Licensing
+This project is licensed under the MIT License. This allows others to use, modify, and distribute this software without restriction.
+
+For full details, please see the LICENSE file in the repository.
