@@ -164,7 +164,7 @@ def compute_digit(image, digit_model):
     return np.argmax(digit_model.predict(digit, verbose=False))
 
 
-def compile_model():
+def compile_model(model_weights_path):
     """
     Compile and return a trained digit recognition model.
 
@@ -185,12 +185,13 @@ def compile_model():
 
     # Compile and load pretrained weights
     model.compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
-    model.load_weights('model_training/digit_recognizer.h5')
+    
+    model.load_weights(model_weights_path)
     
     # Return compiled model with trained weights
     return model
 
-def recognize_sudoku(image):
+def recognize_sudoku(image, model_weights_path):
     """
     Recognizes and extracts the digits of a Sudoku puzzle from an image.
 
@@ -203,7 +204,7 @@ def recognize_sudoku(image):
     """
 
     # Load the pre-trained digit recognition model
-    digit_model = compile_model()
+    digit_model = compile_model(model_weights_path)
 
     # Find the Sudoku puzzle and warp it to get a top-down view
     (puzzle, warped) = find_puzzle(image)

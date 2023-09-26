@@ -1,6 +1,5 @@
-from puzzle_recognizer import recognize_sudoku
-from sudoku_solver.sudoku_solver import numberOfSolutions
-from sudoku_solver.sudoku_solver import printSudoku
+from puzzle_recognition.puzzle_recognizer import recognize_sudoku
+from sudoku_solver.sudoku_solver import ComputeAllSolutions
 
 from flask import Flask, request, jsonify
 from werkzeug.utils import secure_filename
@@ -33,7 +32,7 @@ def upload_file():
         return jsonify(error="Failed to read the image. Please ensure it's a valid image file.")
     
     # Recognize the Sudoku puzzle from the image
-    sudoku_np = recognize_sudoku(loaded_image)
+    sudoku_np = recognize_sudoku(loaded_image, 'puzzle_recognition/model_training/digit_recognizer.h5')
     sudoku_list = sudoku_np.tolist()  # Convert to list for JSON serialization
     
     # Serve the recognized Sudoku in an HTML response
@@ -152,10 +151,6 @@ def render_recognized_sudoku(sudoku_list):
     </html>
     '''
 
-
-
-
-
 @app.route('/solve', methods=['POST'])
 def solve_sudoku():
     # Solve the received Sudoku puzzle
@@ -166,11 +161,10 @@ def solve_sudoku():
     if not flattened_sudoku or len(flattened_sudoku) != 81:
         return jsonify(error="Invalid Sudoku data.")
 
-    num_solutions, solutions = numberOfSolutions(flattened_sudoku)
+    num_solutions, solutions = ComputeAllSolutions(flattened_sudoku)
 
     # Convert the flattened solutions back to 2D arrays (9x9)
     solutions_2D = [[solution[i:i+9] for i in range(0, 81, 9)] for solution in solutions]
-
 
     return jsonify(num_solutions=num_solutions, solutions=solutions_2D)
 
@@ -188,6 +182,6 @@ def index():
         </body>
     </html>
     '''
-
+    
 if __name__ == '__main__':
     app.run(debug=True)
