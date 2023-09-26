@@ -112,7 +112,7 @@ def remove_boundary_segments(image):
 
 def compute_digit(image, digit_model):
     """
-    Compute the digit present in an image using a deep learning model.
+    Compute the digit present in an image using a convolutional neural network.
 
     Args:
         image: Input image containing a single digit.
