@@ -88,6 +88,7 @@ def sudokuSolver(inputSudoku, othersolution_support=[]):
 - Printed digits dataset: [GitHub - kaydee0502/printed-digits-dataset](https://github.com/kaydee0502/printed-digits-dataset)
 - Localization and warping approach: [OpenCV Sudoku Solver and OCR](https://pyimagesearch.com/2020/08/10/opencv-sudoku-solver-and-ocr/). The preparation and recognition of digits is loosely based also on this post.
 - Sudoku plotting function: [StackExchange - Draw a Sudoku Board](https://codegolf.stackexchange.com/questions/126930/draw-a-sudoku-board-using-line-drawing-characters)
+- Sources of the Sudoku Images: [sudoku1](https://raetsel.ch/raetseluebersicht/sudoku/), [sudoku2](), [sudoku3](https://en.wikipedia.org/wiki/Sudoku_solving_algorithms#/media/File:Sudoku_Puzzle_by_L2G-20050714_standardized_layout.svg), [sudoku4](https://f-puzzles.com)
 
 ## Planned Features
 - **Recognition Improvement**: Enhancements are planned to rectify any inaccuracies in the recognition process.
