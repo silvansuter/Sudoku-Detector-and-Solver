@@ -11,7 +11,7 @@ This project is designed to recognize and solve Sudoku puzzles from images. It e
 ## Installation & Setup
 ```sh
 # Clone the repository to your local machine.
-git clone https://github.com/silvansuter/Sudoku_Detector_and_Solver
+git clone https://github.com/silvansuter/Sudoku-Detector-and-Solver
 
 # Install the required packages.
 pip install -r requirements.txt
