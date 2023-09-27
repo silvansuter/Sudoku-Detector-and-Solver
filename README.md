@@ -11,7 +11,7 @@ This project utilizes image processing and constraint programming (integer optim
 ## Installation & Setup
 ```sh
 # Clone the repository to your local machine.
-git clone <repository-url>
+git clone https://github.com/silvansuter/Sudoku_Detector_and_Solver
 
 # Install the required packages.
 pip install -r requirements.txt
