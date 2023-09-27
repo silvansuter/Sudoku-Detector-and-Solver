@@ -27,6 +27,14 @@ Then navigate to `http://127.0.0.1:5000/` in your web browser to use the applica
 
 Pressing the 'reset' button, allows to upload a new image.
 
+## Visualization
+![Description of Image](readme_assets/extraction_and_solving_process.png)
+
+In the visualization above:
+1. **Left**: The original, raw image of the Sudoku puzzle as inputted by the user.
+2. **Middle**: The extracted Sudoku.
+3. **Right**: The final, solved Sudoku puzzle, obtained through the application of our solving algorithm.
+
 ## File Structure
 - `main.py`: Main file containing the Flask application and routes.
 - `demo.ipynb`: Jupyter Notebook serving as a demonstration of the recognizing and solving functions.
