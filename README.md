@@ -1,12 +1,12 @@
 # Sudoku Solver and Recognizer
 
 ## Description
-This project utilizes image processing and constraint programming (integer optimization) to recognize and solve Sudoku puzzles from images, allowing users to upload an image of a Sudoku puzzle and receive the solved puzzle as output. The recognizer understands both hand-written and printed numbers. If the Sudoku has multiple solutions, the solver is able to find all of them.
+This project is designed to recognize and solve Sudoku puzzles from images. It employs image processing and constraint programming (integer optimization) to enable users to upload an image of a Sudoku puzzle and receive the solved puzzle as output. The recognizer is capable of identifying both handwritten and printed digits, and the solver can find all possible solutions if multiple exist.
 
 ## Features
-- **Sudoku Recognition**: Extracts Sudoku puzzles from images of Sudokus that contain both handwritten or printed digits.
+- **Sudoku Recognition**: Recognizes Sudoku puzzles from images containing both handwritten and printed digits.
 - **Sudoku Solving**: Solves the recognized Sudoku puzzles using constraint programming.
-- **Web Interface**: Provides a user-friendly interface to interact with the application.
+- **Web Interface**: Offers an intuitive interface for user interaction with the application.
 
 ## Installation & Setup
 ```sh
@@ -77,11 +77,13 @@ def sudokuSolver(inputSudoku, othersolution_support=[]):
 `demo.ipynb` serves as a demonstration notebook, illustrating the capabilities of the Sudoku recognizing and solving functionalities.
 
 ## References
-The contents of the 'printed_digits_dataset'-folder are from https://github.com/kaydee0502/printed-digits-dataset. See also the license in that folder.
+- Printed digits dataset: [GitHub - kaydee0502/printed-digits-dataset](https://github.com/kaydee0502/printed-digits-dataset)
+- Localization and warping approach: [OpenCV Sudoku Solver and OCR](https://pyimagesearch.com/2020/08/10/opencv-sudoku-solver-and-ocr/). The preparation and recognition of digits is loosely based also on this post.
+- Sudoku plotting function: [StackExchange - Draw a Sudoku Board](https://codegolf.stackexchange.com/questions/126930/draw-a-sudoku-board-using-line-drawing-characters)
 
-The approach of localizing the Sudoku and warping is taken from https://pyimagesearch.com/2020/08/10/opencv-sudoku-solver-and-ocr/. The preparation of digits is loosely based also on this post.
-
-The function for plotting a Sudoku with Python is taken from https://codegolf.stackexchange.com/questions/126930/draw-a-sudoku-board-using-line-drawing-characters.
+## Planned Features
+- **Recognition Improvement**: Enhancements are planned to rectify any inaccuracies in the recognition process.
+- **Value Correction**: In the application, users should be able to correct wrongly recognized numbers with a double click.
 
 ## Licensing
 This project is licensed under the MIT License. This allows others to use, modify, and distribute this software without restriction.
