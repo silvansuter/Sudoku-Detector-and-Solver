@@ -58,7 +58,7 @@ def find_puzzle(image, debug=False):
         cv2.drawContours(image, [puzzle_contour], -1, (0, 255, 0), 2)
         cv2.imshow("Detected Puzzle Outline", image)
         cv2.waitKey(0)
-
+    
     # Warp the detected puzzle area to get a top-down view
     warped_rgb = four_point_transform(image, puzzle_contour.reshape(4, 2))
     warped_gray = four_point_transform(gray_image, puzzle_contour.reshape(4, 2))
@@ -66,7 +66,7 @@ def find_puzzle(image, debug=False):
     if debug:
         cv2.imshow("Warped Puzzle", warped_rgb)
         cv2.waitKey(0)
-
+    
     return (warped_rgb, warped_gray)
 
 def remove_boundary_segments(image):
