@@ -54,6 +54,7 @@ def sudokuSolver(inputSudoku, othersolution_support=[]):
     # Solve the CP model
     solver = cp_model.CpSolver()
     solver.parameters.max_time_in_seconds = 3.0  # set a timeout
+    solver.parameters.num_search_workers = 1 # Necessary, for otherwise bugs appear when calling the function from notebook. Remove, if desired.
     status = solver.Solve(model)
 
     # If no solution found, return None
@@ -67,6 +68,7 @@ def sudokuSolver(inputSudoku, othersolution_support=[]):
     for i in range(9):
         for j in range(9):
             for k in range(9):
+                print(i,j,k)
                 if solver.Value(variables[i][j][k]) == 1:
                     outputSudoku[9*i+j] = k + 1
                     support[81*i+9*j+k] = 1
@@ -95,7 +97,7 @@ def ComputeAllSolutions(inputSudoku, maxNumber=10):
 
     # Try to solve the Sudoku using the solver function
     sol, supp = sudokuSolver(inputSudoku)
-
+    
     # As long as solutions are found, add them to the list and avoid those in subsequent solves
     while sol is not None:
         sols.append(sol)
