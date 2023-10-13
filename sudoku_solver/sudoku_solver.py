@@ -13,6 +13,7 @@ def sudokuSolver(inputSudoku, othersolution_support=[]):
         outputSudoku (list): A list representation of the solved Sudoku.
         support (list): A list representation of the support values for the solution.
     """
+    
     # Create a CP model.
     model = cp_model.CpModel()
 
@@ -42,7 +43,7 @@ def sudokuSolver(inputSudoku, othersolution_support=[]):
             k = inputSudoku[9*i+j] - 1
             if k >= 0:
                 model.Add(variables[i][j][k] == 1)
-
+    
     # Avoid previously computed solutions
     for other_solution in othersolution_support:
         dot_product = [variables[i][j][k] * other_solution[81*i+9*j+k] for i in range(9) for j in range(9) for k in range(9)]
@@ -52,6 +53,7 @@ def sudokuSolver(inputSudoku, othersolution_support=[]):
 
     # Solve the CP model
     solver = cp_model.CpSolver()
+    solver.parameters.max_time_in_seconds = 3.0  # set a timeout
     status = solver.Solve(model)
 
     # If no solution found, return None
