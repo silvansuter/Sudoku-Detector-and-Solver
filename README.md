@@ -91,7 +91,7 @@ def sudokuSolver(inputSudoku, othersolution_support=[]):
 - Sources of the Sudoku Images: [sudoku1](https://raetsel.ch/raetseluebersicht/sudoku/), [sudoku2](), [sudoku3](https://en.wikipedia.org/wiki/Sudoku_solving_algorithms#/media/File:Sudoku_Puzzle_by_L2G-20050714_standardized_layout.svg), [sudoku4](https://f-puzzles.com)
 
 ## Planned Features
-- **Recognition Improvement**: Enhancements are planned to rectify any inaccuracies in the recognition process.
+- **Recognition Improvement**: Enhancements are planned to rectify any inaccuracies in the recognition process. Currently, the recognizer works best, on actual photographs of Sudokus, as compared to screenshots of computer generated Sudokus.
 - **Value Correction**: In the application, users should be able to correct wrongly recognized numbers with a double click.
 
 ## Licensing
