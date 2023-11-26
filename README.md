@@ -23,7 +23,7 @@ Then navigate to `http://127.0.0.1:5000/` in your web browser to use the applica
 
 ## Usage
 1. **Upload Page**: Users are greeted with an upload page, allowing them to upload an image of a Sudoku puzzle.
-2. **Recognition & Solution**: After uploading, the recognized puzzle is displayed, and users can request solutions for the recognized Sudoku. The recognition currently works best for photos of Sudokus (with some number maybe filled in already), in contrast to images of computer generated puzzles.
+2. **Recognition & Solution**: After uploading, the recognized puzzle is displayed, and users can request solutions for the recognized Sudoku. The recognition currently works best for photos of Sudokus (with some number maybe filled in already), in contrast to computer generated images of puzzles.
 
 Pressing the 'reset' button, allows to upload a new image.
 
