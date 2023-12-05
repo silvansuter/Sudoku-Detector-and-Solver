@@ -68,7 +68,6 @@ def sudokuSolver(inputSudoku, othersolution_support=[]):
     for i in range(9):
         for j in range(9):
             for k in range(9):
-                print(i,j,k)
                 if solver.Value(variables[i][j][k]) == 1:
                     outputSudoku[9*i+j] = k + 1
                     support[81*i+9*j+k] = 1
